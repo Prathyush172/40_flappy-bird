@@ -14,21 +14,31 @@ class GameEngine:
 
         self.bird = Bird(width // 4, height // 2)
         self.pipe_speed = 4
+        self.pipe_gap = 150
         self.pipe_interval = 90  # frames between pipe spawns
-        self._spawn_timer = 0
-        self.pipes = [Pipe(width + 100, height, speed=self.pipe_speed)]
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
         self.game_over = False
         self._exit_requested = False
+        self.difficulty = "Medium"
+
+        self._reset_game()
 
     def handle_event(self, event):
-        # Once the game is over, wait for a key press before exiting.
+        # After Game Over, choose a difficulty or exit without restarting
+        # the Python program.
         if self.game_over:
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                self._exit_requested = True
-                pygame.event.post(pygame.event.Event(pygame.QUIT))
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_1, pygame.K_KP1):
+                    self._reset_game("Easy")
+                elif event.key in (pygame.K_2, pygame.K_KP2):
+                    self._reset_game("Medium")
+                elif event.key in (pygame.K_3, pygame.K_KP3):
+                    self._reset_game("Hard")
+                elif event.key in (pygame.K_4, pygame.K_KP4, pygame.K_ESCAPE):
+                    self._exit_requested = True
+                    pygame.event.post(pygame.event.Event(pygame.QUIT))
             return
 
         # Flap is edge-triggered (KEYDOWN / MOUSEBUTTONDOWN), not held.
@@ -36,6 +46,31 @@ class GameEngine:
             self.bird.flap()
         if event.type == pygame.MOUSEBUTTONDOWN:
             self.bird.flap()
+
+    def _reset_game(self, difficulty="Medium"):
+        settings = {
+            "Easy": {"speed": 3, "gap": 180},
+            "Medium": {"speed": 4, "gap": 150},
+            "Hard": {"speed": 6, "gap": 120},
+        }
+
+        self.difficulty = difficulty
+        self.pipe_speed = settings[difficulty]["speed"]
+        self.pipe_gap = settings[difficulty]["gap"]
+
+        self.bird = Bird(self.width // 4, self.height // 2)
+        self.pipes = [
+            Pipe(
+                self.width + 100,
+                self.height,
+                gap=self.pipe_gap,
+                speed=self.pipe_speed,
+            )
+        ]
+        self.score = 0
+        self._spawn_timer = 0
+        self.game_over = False
+        self._exit_requested = False
 
     def handle_input(self):
         # Reserved for continuously-held-key input; flapping is handled
@@ -58,7 +93,14 @@ class GameEngine:
         self._spawn_timer += 1
         if self._spawn_timer >= self.pipe_interval:
             self._spawn_timer = 0
-            self.pipes.append(Pipe(self.width, self.height, speed=self.pipe_speed))
+            self.pipes.append(
+                Pipe(
+                    self.width,
+                    self.height,
+                    gap=self.pipe_gap,
+                    speed=self.pipe_speed,
+                )
+            )
 
         for pipe in self.pipes:
             pipe.move()
@@ -98,19 +140,47 @@ class GameEngine:
             final_score_text = self.font.render(
                 f"Final Score: {self.score}", True, WHITE
             )
-            instruction_text = instruction_font.render(
-                "Press any key to exit", True, WHITE
+            menu_title_text = instruction_font.render(
+                "Choose a difficulty:", True, WHITE
+            )
+            easy_text = instruction_font.render(
+                "1 - Easy   (Speed 3, Gap 180)", True, WHITE
+            )
+            medium_text = instruction_font.render(
+                "2 - Medium (Speed 4, Gap 150)", True, WHITE
+            )
+            hard_text = instruction_font.render(
+                "3 - Hard   (Speed 6, Gap 120)", True, WHITE
+            )
+            exit_text = instruction_font.render(
+                "4 - Exit", True, WHITE
             )
 
             screen.blit(
                 game_over_text,
-                game_over_text.get_rect(center=(self.width // 2, self.height // 2 - 70)),
+                game_over_text.get_rect(center=(self.width // 2, self.height // 2 - 150)),
             )
             screen.blit(
                 final_score_text,
-                final_score_text.get_rect(center=(self.width // 2, self.height // 2)),
+                final_score_text.get_rect(center=(self.width // 2, self.height // 2 - 95)),
             )
             screen.blit(
-                instruction_text,
-                instruction_text.get_rect(center=(self.width // 2, self.height // 2 + 60)),
+                menu_title_text,
+                menu_title_text.get_rect(center=(self.width // 2, self.height // 2 - 45)),
+            )
+            screen.blit(
+                easy_text,
+                easy_text.get_rect(center=(self.width // 2, self.height // 2 - 5)),
+            )
+            screen.blit(
+                medium_text,
+                medium_text.get_rect(center=(self.width // 2, self.height // 2 + 30)),
+            )
+            screen.blit(
+                hard_text,
+                hard_text.get_rect(center=(self.width // 2, self.height // 2 + 65)),
+            )
+            screen.blit(
+                exit_text,
+                exit_text.get_rect(center=(self.width // 2, self.height // 2 + 100)),
             )
